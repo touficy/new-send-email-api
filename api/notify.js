@@ -1,29 +1,34 @@
 const sgMail = require('@sendgrid/mail');
-
-// Set your SendGrid API key from environment variable
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 export default async function handler(req, res) {
-  // Only allow POST requests
+  // ✅ Basic Auth Protection
+  const authHeader = req.headers.authorization || '';
+  const base64Credentials = authHeader.split(' ')[1] || '';
+  const [user, pass] = Buffer.from(base64Credentials, 'base64').toString().split(':');
+
+  if (
+    user !== process.env.BASIC_USER ||
+    pass !== process.env.BASIC_PASS
+  ) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { phone_number, department_name } = req.body;
-
-  // Validate required fields
   if (!phone_number || !department_name) {
     return res.status(400).json({ error: 'Missing phone_number or department_name' });
   }
 
-  // Format timestamp
   const now = new Date();
   const formattedTime = now.toLocaleTimeString('en-US', { hour12: false });
   const formattedDateTime = now.toLocaleString('en-US');
 
-  // Determine recipient based on department
   const dept = department_name.toLowerCase();
-  let toEmail = 'touficy@optimalsolutions.it'; // default fallback
+  let toEmail = 'touficy@optimalsolutions.it';
   let departmentLabel = department_name;
 
   if (dept === 'sor') {
@@ -34,10 +39,9 @@ export default async function handler(req, res) {
     departmentLabel = 'Preapproval';
   }
 
-  // Create the email
   const msg = {
     to: toEmail,
-    from: 'touficy@optimalsolutions.it', // ⚠️ Must be verified in your SendGrid account
+    from: 'touficy@optimalsolutions.it', // Verified sender
     subject: `Abandoned Call Notification - ${departmentLabel}`,
     text: `Dear ${departmentLabel} Team,
 
@@ -50,11 +54,9 @@ Notification System`
   };
 
   try {
-    // Send the email via SendGrid
     await sgMail.send(msg);
     return res.status(200).json({ message: 'Email sent successfully' });
   } catch (error) {
-    // Log and return full error details to help with debugging
     console.error('SendGrid error:', error.response?.body || error.message);
     return res.status(500).json({
       error: 'Failed to send email',
