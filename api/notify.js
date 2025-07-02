@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   // Create the email
   const msg = {
     to: toEmail,
-    from: 'noreply@yourdomain.com', // ⚠️ Must be verified in your SendGrid account
+    from: 'touficy@optimalsolutions.it', // ⚠️ Must be verified in your SendGrid account
     subject: `Abandoned Call Notification - ${departmentLabel}`,
     text: `Dear ${departmentLabel} Team,
 
